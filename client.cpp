@@ -172,72 +172,48 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 /* 通信スレッド関数 */
 DWORD WINAPI Threadfunc(void*) {
 
-	SOCKET sConnect;
-	SOCKADDR_IN saConnect;
+	int sock = (int)socket(AF_INET, SOCK_DGRAM, 0);
+	SOCKADDR_IN addr;
 	u_short wPort = 8000;
 	char serverName[1024] = "192.168.0.4";
 
 	// リスンソケット
-	sConnect = socket(AF_INET, SOCK_STREAM, 0);
-	ZeroMemory(&saConnect, sizeof(saConnect));
+	ZeroMemory(&addr, sizeof(addr));
 
 	HOSTENT* IpHost;
-	unsigned int addr;
+	unsigned int tempAddr;
 	IpHost = gethostbyname(serverName);
 	if (IpHost == NULL) {
-		addr = inet_addr(serverName);
+		tempAddr = inet_addr(serverName);
 		IpHost = gethostbyaddr((char*)&addr, 4, AF_INET);
 	}
 	if (IpHost == NULL) {
 		SetWindowText(hwMain, L"Hostが見つけられません");
-		closesocket(sConnect);
+		closesocket(sock);
 		return 1;
 	}
 
 	// 8000番に接続待機用ソケット作成
-	memset(&saConnect, 0, sizeof(SOCKADDR_IN));
-	saConnect.sin_family = IpHost->h_addrtype;
-	saConnect.sin_addr.s_addr = *((u_long*)IpHost->h_addr);
-	saConnect.sin_port = htons(wPort);
+	memset(&addr, 0, sizeof(SOCKADDR_IN));
+	addr.sin_family = IpHost->h_addrtype;
+	addr.sin_addr.s_addr = *((u_long*)IpHost->h_addr);
+	addr.sin_port = htons(wPort);
 
 	SetWindowText(hwMain, L"接続待機ソケット成功");
 
-	// サーバと接続する
-	if (connect(sConnect, (sockaddr*)&saConnect, sizeof(saConnect)) == SOCKET_ERROR) {
-		SetWindowText(hwMain, L"サーバと接続できませんでした。");
-		closesocket(sConnect);
-		return 1;
-	}
-
-	SetWindowText(hwMain, L"サーバと接続完了");
-
-	if (sConnect == INVALID_SOCKET) {
-
-		shutdown(sConnect, 2);
-		closesocket(sConnect);
-
-		SetWindowText(hwMain, L"ソケット接続失敗");
-
-		return 1;
-	}
-
-	SetWindowText(hwMain, L"ソケット接続成功");
+	int fromlen = (int)sizeof(addr);
 
 	while (1)
 	{
-		int nRcv;
-
 		// サーバ側キャラの位置情報を送信
-		send(sConnect, (const char*)&player_, sizeof(player_), 0);
+		sendto(sock, (const char*)&player_, sizeof(player_), 0, (struct sockaddr*)&addr, sizeof(addr));
 
 		// クライアント側キャラの位置情報を受け取り
-		nRcv = recv(sConnect, (char*)&fixed_, sizeof(fixed_), 0);
-
-		if (nRcv == SOCKET_ERROR)break;
+		recvfrom(sock, (char*)&fixed_, sizeof(fixed_), 0, (struct sockaddr*)&addr, &fromlen);
 	}
 
-	shutdown(sConnect, 2);
-	closesocket(sConnect);
+	shutdown(sock, 2);
+	closesocket(sock);
 
 	return 0;
 }
