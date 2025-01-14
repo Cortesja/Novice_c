@@ -3,9 +3,14 @@
 #include <process.h>
 #include <mmsystem.h>
 #include <string>
+#include <memory>
+#include <fstream>
 
 #pragma comment(lib,"wsock32.lib")
 #pragma comment(lib, "winmm.lib")
+
+#include  "assets/Player.h"
+#include  "assets/myStructs.h"
 
 DWORD WINAPI Threadfunc(void*);
 
@@ -17,61 +22,6 @@ const char kWindowTitle[] = "クライアント";
 const int kWindowWidth = 1280;
 const int kWindowHeight = 720;
 
-struct Pos {
-	float x;
-	float y;
-};
-
-struct Circle {
-	Pos pos;
-	float radius;
-};
-
-class Player {
-public:
-	void Initialize(Pos pos, float radius, int color, float speed) {
-		player_.pos = pos;
-		player_.radius = radius;
-		color_ = color;
-		speed_ = speed;
-	}
-	void Update() {
-		if (Novice::CheckHitKey(DIK_UP)) {
-			player_.pos.y -= speed_;
-		}
-		if (Novice::CheckHitKey(DIK_DOWN)) {
-			player_.pos.y += speed_;
-		}
-		if (Novice::CheckHitKey(DIK_LEFT)) {
-			player_.pos.x -= speed_;
-		}
-		if (Novice::CheckHitKey(DIK_RIGHT)) {
-			player_.pos.x += speed_;
-		}
-	}
-	void Draw() {
-		Novice::DrawEllipse((int)player_.pos.x, (int)player_.pos.y, (int)player_.radius, (int)player_.radius, 0.0f, color_, kFillModeSolid);
-	}
-	/// <summary>
-	/// 円の情報ゲッター
-	/// </summary>
-	/// <param name="player"></param>
-	/// <param name="fixed"></param>
-	Circle GetPlayer() {
-		return player_;
-	}
-	void SetPos(Circle currentPos) {
-		player_ = currentPos;
-	}
-	void SetColor(int color) {
-		color_ = color;
-	}
-private:
-	Circle player_;
-	unsigned int color_;
-	float speed_;
-};
-
 bool ChkCollision(const Circle player, const Circle fixed) {
 	float dx = fixed.pos.x - player.pos.x;
 	float dy = fixed.pos.y - player.pos.y;
@@ -79,10 +29,11 @@ bool ChkCollision(const Circle player, const Circle fixed) {
 	return distance <= (player.radius + fixed.radius);
 }
 
-Player* player = new Player();
-Player* fixed = new Player();
+std::unique_ptr<Player> player = nullptr;
+std::unique_ptr<Player> player2 = nullptr;
+
 //Circle構造体をよい
-Circle fixed_;
+Circle player2_;
 //Player用のCirlce構造体
 Circle player_;
 
@@ -104,11 +55,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	WSAStartup(MAKEWORD(2, 0), &wdData);
 
 	//スレッド制作
-	hThread = (HANDLE)CreateThread(NULL, 0, &Threadfunc, (LPVOID)&fixed_, 0, &dwID);
+	hThread = (HANDLE)CreateThread(NULL, 0, &Threadfunc, (LPVOID)&player2_, 0, &dwID);
 
 	//プレイヤーの初期化
+	player = std::make_unique<Player>();
+	player2 = std::make_unique<Player>();
+
 	player->Initialize({200,100}, 25.0f, 0xFFFFFFFF, 5.0f);
-	fixed->Initialize({ kWindowWidth / 2, kWindowHeight / 2 }, 50.0f, 0xFF0000FF, 2.0f);
+	player2->Initialize({ kWindowWidth / 2, kWindowHeight / 2 }, 50.0f, 0xFF0000FF, 2.0f);
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -127,7 +81,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//サーバーのグローバル変数にplayerの位置を代入
 		player_ = player->GetPlayer();
 
-		if (ChkCollision(player_, fixed_)) {
+		if (ChkCollision(player_, player2_)) {
 			player->SetColor(0x0000FFFF);
 		}
 		else {
@@ -135,7 +89,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		}
 
 		
-		fixed->SetPos(fixed_);
+		player2->SetPos(player2_);
 		///
 		/// ↑更新処理ここまで
 		///
@@ -144,7 +98,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		/// ↓描画処理ここから
 		///
 
-		fixed->Draw();
+		player2->Draw();
 		player->Draw();
 
 		///
@@ -175,10 +129,13 @@ DWORD WINAPI Threadfunc(void*) {
 	int sock = (int)socket(AF_INET, SOCK_DGRAM, 0);
 	SOCKADDR_IN addr;
 	u_short wPort = 8000;
-	char serverName[1024] = "192.168.0.4";
+	char serverName[20];
 
 	// リスンソケット
 	ZeroMemory(&addr, sizeof(addr));
+
+	std::ifstream ifs("ip.txt");
+	ifs.getline(serverName, sizeof(serverName));
 
 	HOSTENT* IpHost;
 	unsigned int tempAddr;
@@ -209,7 +166,7 @@ DWORD WINAPI Threadfunc(void*) {
 		sendto(sock, (const char*)&player_, sizeof(player_), 0, (struct sockaddr*)&addr, sizeof(addr));
 
 		// クライアント側キャラの位置情報を受け取り
-		recvfrom(sock, (char*)&fixed_, sizeof(fixed_), 0, (struct sockaddr*)&addr, &fromlen);
+		recvfrom(sock, (char*)&player2_, sizeof(player2_), 0, (struct sockaddr*)&addr, &fromlen);
 	}
 
 	shutdown(sock, 2);
