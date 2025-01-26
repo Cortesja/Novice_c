@@ -108,7 +108,6 @@ xcopy C:\KamataEngine\DirectXGame\Resources "$(OutDirFullPath)NoviceResources" /
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="assets\GameManager.cpp" />
     <ClCompile Include="assets\Player.cpp" />
     <ClCompile Include="C:\KamataEngine\DirectXGame\base\StringUtility.cpp" />
     <ClCompile Include="C:\KamataEngine\DirectXGame\base\DirectXCommon.cpp" />
@@ -120,7 +119,6 @@ xcopy C:\KamataEngine\DirectXGame\Resources "$(OutDirFullPath)NoviceResources" /
     <ClCompile Include="client.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="assets\GameManager.h" />
     <ClInclude Include="assets\myStructs.h" />
     <ClInclude Include="assets\Player.h" />
     <ClInclude Include="C:\KamataEngine\DirectXGame\base\StringUtility.h" />
