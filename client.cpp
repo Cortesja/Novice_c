@@ -26,11 +26,11 @@ const char kWindowTitle[] = "クライアント";
 const int kWindowWidth = 1280;
 const int kWindowHeight = 720;
 
-bool ChkCollision(const Circle player, const Circle fixed) {
-	float dx = fixed.pos.x - player.pos.x;
-	float dy = fixed.pos.y - player.pos.y;
+bool ChkCollision(const Circle player1, const Circle player2) {
+	float dx = player2.pos.x - player1.pos.x;
+	float dy = player2.pos.y - player1.pos.y;
 	float distance = std::sqrtf(powf(dx, 2) + (powf(dy, 2)));
-	return distance <= (player.radius + fixed.radius);
+	return distance <= (player1.radius + player2.radius);
 }
 
 Result DetermineWinner(const Style player1, const Style player2) {
@@ -80,13 +80,11 @@ void Kekka(Result result, Player* player1, Player* player2) {
 	}
 }
 
-std::unique_ptr<Player> player = nullptr;
+std::unique_ptr<Player> player1 = nullptr;
 std::unique_ptr<Player> player2 = nullptr;
 
-//Circle構造体をよい
+Circle player1_;
 Circle player2_;
-//Player用のCirlce構造体
-Circle player_;
 
 // キー入力結果を受け取る箱
 char keys[256] = { 0 };
@@ -109,10 +107,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	hThread = (HANDLE)CreateThread(NULL, 0, &Threadfunc, (LPVOID)&player2_, 0, &dwID);
 
 	//プレイヤーの初期化
-	player = std::make_unique<Player>();
+	player1 = std::make_unique<Player>();
 	player2 = std::make_unique<Player>();
 
-	player->Initialize({200,100}, 25.0f, 0xFFFFFFFF, 5.0f);
+	player1->Initialize({200,100}, 25.0f, 0xFFFFFFFF, 5.0f);
 	player2->Initialize({ kWindowWidth / 2, kWindowHeight / 2 }, 50.0f, 0xFF0000FF, 2.0f);
 
 	// ウィンドウの×ボタンが押されるまでループ
@@ -129,16 +127,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 
 
-		player->Update();
+		player1->Update();
 		//サーバーのグローバル変数にplayerの位置を代入
-		player_ = player->GetPlayer();
+		player1_ = player1->GetPlayer();
+		player2->SetPos(player2_);
 
-		if (ChkCollision(player_, player2_)) {
-			Result result = DetermineWinner(player->GetStyle(), player2->GetStyle());
-			Kekka(result, player.get(), player2.get()); //Kekka(Result, Player* player1, Player* player2)
+		if (ChkCollision(player1->GetPlayer(), player2->GetPlayer())) {
+			Result result = DetermineWinner(player1->GetStyle(), player2->GetStyle());
+			Kekka(result, player1.get(), player2.get()); //Kekka(Result, Player* player1, Player* player2)
 		}
 		
-		player2->SetPos(player2_);
 		///
 		/// ↑更新処理ここまで
 		///
@@ -148,7 +146,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 
 		player2->Draw(2);
-		player->Draw(1);
+		player1->Draw(1);
 
 		///
 		/// ↑描画処理ここまで
@@ -183,7 +181,7 @@ DWORD WINAPI Threadfunc(void*) {
 	// リスンソケット
 	ZeroMemory(&addr, sizeof(addr));
 
-	std::ifstream ifs("ip.txt");
+	std::ifstream ifs("NoviceResources\ip.txt");
 	ifs.getline(serverName, sizeof(serverName));
 
 	HOSTENT* IpHost;
@@ -212,7 +210,7 @@ DWORD WINAPI Threadfunc(void*) {
 	while (1)
 	{
 		// サーバ側キャラの位置情報を送信
-		sendto(sock, (const char*)&player_, sizeof(player_), 0, (struct sockaddr*)&addr, sizeof(addr));
+		sendto(sock, (const char*)&player1_, sizeof(player1_), 0, (struct sockaddr*)&addr, sizeof(addr));
 
 		// クライアント側キャラの位置情報を受け取り
 		recvfrom(sock, (char*)&player2_, sizeof(player2_), 0, (struct sockaddr*)&addr, &fromlen);

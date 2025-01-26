@@ -25,4 +25,5 @@ struct Circle {
 	unsigned int color;
 	int points;
 	bool win = false;
+	Style style = Style::kRock;
 };

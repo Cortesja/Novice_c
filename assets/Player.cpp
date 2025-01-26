@@ -54,16 +54,16 @@ void Player::PlayerMove() {
 
 void Player::ChangeType() {
 	if (Novice::CheckHitKey(DIK_1)) {
-		style_ = Style::kRock;
+		player_.style = Style::kRock;
 	}
 	if (Novice::CheckHitKey(DIK_2)) {
-		style_ = Style::kPaper;
+		player_.style = Style::kPaper;
 	}
 	if (Novice::CheckHitKey(DIK_3)) {
-		style_ = Style::kScissors;
+		player_.style = Style::kScissors;
 	}
 
-	switch (style_) {
+	switch (player_.style) {
 	case Style::kRock:
 		player_.color = 0xAA0000FF;
 		break;

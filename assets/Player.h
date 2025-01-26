@@ -73,12 +73,10 @@ public:
 
 	void Rebound();
 
-	Style GetStyle() { return style_; }
+	Style GetStyle() { return player_.style; }
 
 private:
 	Circle player_;
 	float speed_;
 	float reboundSpeed_;
-
-	Style style_ = Style::kRock;
 };
